@@ -1,0 +1,48 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']  # optional: build when you push a tag like v1.0.0
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller PySide6
+
+      - name: Build exe (PyInstaller onefile)
+        run: |
+          pyinstaller SmartTimers.py ^
+            --windowed ^
+            --name SmartTimers ^
+            --clean ^
+            --noconfirm ^
+            --onefile ^
+            --collect-all PySide6 ^
+            --hidden-import PySide6.QtMultimedia
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y
+
+      - name: Build installer (Inno Setup)
+        run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SmartTimers.iss'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartTimers-windows
+          path: |
+            dist/SmartTimers.exe
+            release/SmartTimers_Setup_v*.exe
